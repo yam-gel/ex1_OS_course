@@ -6,47 +6,59 @@
 
 #include "hw1_315393462.h"
 
-void execute_command();
+void execute_internal_command(char **);
+void execute_external_command(char **);
+void parse_string();
+int is_background_command();
 
 void hw1shell$()
 {
     char command[MAX_COMMAND_LENGTH];
+    char *parsed_command[MAX_WORD_LENGTH];
     pid_t pid;
-    int child_state;
+    int child_state, background_command=0;
     while (1)
     {
-        printf("hw1shell$ ");
+        printf("%s", "hw1shell$ ");
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         //removing the trailing '\n' from the string
         command[strcspn(command, "\n")] = 0;
-    
-        pid = fork();
+        
+        parse_string(command, parsed_command);
 
-        if (pid == 0)
+        if (!parsed_command[0])
+            //input was empty
+            continue;
+        if (!strcmp(parsed_command[0], "cd") || !strcmp(parsed_command[0], "exit") || !strcmp(parsed_command[0], "jobs"))
         {
-            printf("child process, pid = %u\n",getpid());
-
-            execute_command(command);    
+            // internal commands 
+            execute_internal_command(parsed_command);
         }
-
         else
-        {  
-            if (waitpid(pid, &child_state, 0) > 0)
+        {
+            pid = fork();
+            if (pid == 0)
             {
-                printf("hw1shell: pid %d finished\n", pid);
-                if (!strcmp(command, "exit"))
-                    return 2;
+                
+                printf("child process, pid = %u\n",getpid());
+                execvp(parsed_command[0], parsed_command);
+                return;   
+            }
+
+            else
+            {  
+                if (waitpid(pid, &child_state, 0) > 0)
+                {
+                    printf("hw1shell: pid %d finished\n", pid);
+                }
             }
         }
-
     }
 }
 
 
-void change_dir(char* command) 
+void change_dir(char* path)
 {
-    char* path = strtok(command,"cd ");
-    //printf("substring is: %s\n", path);
     chdir(path);
     //printf("cwd is: %s\n", getcwd(path, 100));
     if (chdir(path) == -1)
@@ -58,31 +70,39 @@ void backround_job(char* command)
     printf("not implemented yet\n");
 }
 
-void execute_command(char* command) //linux commands are executed here (ls, cd, etc...)
+void execute_internal_command(char** parsed_command) //linux commands are executed here (ls, cd, etc...)
 {
     //if (!strcmp("&", command[strlen(command)-1])) //check if job goes to bg
     //{
     //    backround_job(command); //function is not implemented yet
     //}
 
-    if (strstr(command, "ls")) //TODO: add "ls -l" option
+    if (!strcmp(parsed_command[0], "exit"))
     {
-        execlp("/bin/ls", "/bin/ls",NULL);
-    }
-            
-
-    else if (strstr(command, "cd"))
-    {
-        change_dir(command); 
+        exit(0);
     }
 
-    else if (strstr(command, "pwd"))
+    else if (!strcmp(parsed_command[0], "cd"))
     {
-        printf("%s\n", getcwd(command, 100));
+        change_dir(parsed_command[1]); 
     }
 }
 
 
+void parse_string(char* str, char** parsed_command)
+{
+    int i;
+  
+    for (i = 0; i < MAX_COMMAND_LENGTH; i++)
+    {
+        parsed_command[i] = strsep(&str, " ");
+  
+        if (parsed_command[i] == NULL)
+            break;
+        if (strlen(parsed_command[i]) == 0)
+            i--;
+    }
+}
 
 int main(int argc, int argv)
 {
