@@ -1,1 +1,2 @@
 #define MAX_COMMAND_LENGTH  100
+#define MAX_WORD_LENGTH 50
