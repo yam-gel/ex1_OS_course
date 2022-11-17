@@ -96,6 +96,7 @@ void hw1shell$()
 void change_dir(char* path)
 {
     chdir(path);
+    
     //printf("cwd is: %s\n", getcwd(path, 100));
     if (chdir(path) == -1)
         printf("invalid command\n");
@@ -112,10 +113,8 @@ void background_jobs(char* command, struct process_info* jobs)
 
 void execute_internal_command(char** parsed_command) //linux commands are executed here (ls, cd, etc...)
 {
-    //if (!strcmp("&", command[strlen(command)-1])) //check if job goes to bg
-    //{
-    //    backround_job(command); //function is not implemented yet
-    //}
+
+    printf("parsed command is:\n");
 
     if (!strcmp(parsed_command[0], "exit"))
     {
