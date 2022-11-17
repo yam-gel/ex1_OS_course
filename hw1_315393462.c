@@ -6,16 +6,18 @@
 
 #include "hw1_315393462.h"
 
+typedef struct process_info
+{
+    int pid;
+    char command[MAX_COMMAND_LENGTH];
+}process_info;
+
 void execute_internal_command(char **);
 void execute_external_command(char **);
 int parse_string();
 int is_background_command();
-
-struct process_info
-{
-    int pid;
-    char command[MAX_COMMAND_LENGTH];
-};
+void print_errors(int, char*, int);
+void background_jobs(char*, struct process_info*);
 
 void hw1shell$()
 {
@@ -24,15 +26,25 @@ void hw1shell$()
     pid_t pid;
     int child_state, background_command=0;
     int background;
-    struct process_info jobs[4];
+    process_info jobs[4];
+
+    for (int j = 0; j<4; j++)
+    {
+        //make sure all jobs pid are initiallized to 0
+        if (jobs[j].pid != 0)
+            jobs[j].pid = 0;
+        //strcpy(jobs[j].command, 0);
+    }
+
+
     while (1)
     {
         printf("%s", "hw1shell$ ");
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         //removing the trailing '\n' from the string
         command[strcspn(command, "\n")] = 0;
-        
-        
+        char bg_com[MAX_COMMAND_LENGTH]; 
+        strcpy(bg_com, command);
 
         if (strlen(command)==0)
              //input was empty
@@ -56,26 +68,35 @@ void hw1shell$()
             {
                 //printf("child process, pid = %u\n",getpid());
                 if (execvp(parsed_command[0], parsed_command) == -1)
-                    printf("invalid command\n");
+                {
+                    print_errors(11, NULL, 0);
+                    print_errors(13, parsed_command[0], -1);
+                }
+                    
                 return;   
             }
             
             else
             {  
-                if (background)
-                {
+                if (background) //TODO, Valeria: check that child processes are not terminated and still running on bg, using 
+                {               //waitpid & WNOHANG
                     printf("hw1shell: pid %d started\n", pid);
-                    for (int i=0; i<4; i++)
+                    for (int i=0; i<5; i++)
                     {
                         if (jobs[i].pid)
                         {
-                            if (i==3)
-                                printf("hw1shell: too many background commands running");
+                            if (i==4){
+                                printf("hw1shell: too many background commands running\n");
+                                break;
+                            }
+                                
                         }
                         else
                         {
+                            strtok(bg_com, "&");
+                            printf(bg_com);
                             jobs[i].pid = pid;
-                            strcpy(jobs[i].command, command);
+                            strcpy(jobs[i].command, bg_com);
                             printf("%d  %s\n", jobs[i].pid, jobs[i].command);
                             break;
                         }
@@ -87,19 +108,34 @@ void hw1shell$()
                 {
                     printf("hw1shell: pid %d finished\n", pid);
                 }
+
+                else if (waitpid(pid, &child_state, 0) == -1)
+                {
+                    print_errors(13, parsed_command[0], -1);
+                }
             }
         }
     }
 }
 
+void print_errors(int error, char* system_call, int errno)
+{
+    if (error == 11)
+    {
+        printf("hw1shell: invalid command\n");
+    }
 
+    if (error == 13)
+    {
+        printf("hw1shell: %s failed, errno is %d\n", system_call, errno);
+    }
+}
 void change_dir(char* path)
 {
-    chdir(path);
-    
-    //printf("cwd is: %s\n", getcwd(path, 100));
-    if (chdir(path) == -1)
-        printf("invalid command\n");
+    int i = chdir(path); 
+
+    if ( i == -1)
+        print_errors(11, NULL, 0);
 }
 
 void background_jobs(char* command, struct process_info* jobs)
@@ -114,9 +150,7 @@ void background_jobs(char* command, struct process_info* jobs)
 void execute_internal_command(char** parsed_command) //linux commands are executed here (ls, cd, etc...)
 {
 
-    printf("parsed command is:\n");
-
-    if (!strcmp(parsed_command[0], "exit"))
+    if (!strcmp(parsed_command[0], "exit")) //TODO: need to finish all child processes, and if nedded, free allocated memory 
     {
         exit(0);
     }
