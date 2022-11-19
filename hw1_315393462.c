@@ -18,7 +18,7 @@ int parse_string();
 int is_background_command();
 void print_errors(int, char*, int);
 void background_jobs(char*, struct process_info*);
-void check_zombies(pid_t, int , process_info* );
+void check_zombies(process_info* );
 
 void hw1shell$()
 {
@@ -40,7 +40,6 @@ void hw1shell$()
 
     while (1)
     {
-        check_zombies(pid,child_state, jobs);
         printf("%s", "hw1shell$ ");
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         //removing the trailing '\n' from the string
@@ -80,15 +79,15 @@ void hw1shell$()
             
             else
             {  
-                if (background) //TODO, Valeria: check that child processes are not terminated and still running on bg, using 
-                {               //waitpid & WNOHANG
+                if (background) 
+                {             
                     printf("hw1shell: pid %d started\n", pid);
                     //check_zombies(pid, child_state, jobs);
-                    for (int i=0; i<5; i++)
+                    for (int i=0; i<4; i++)
                     {
                         if (jobs[i].pid)
                         {
-                            if (i==4){
+                            if (i==3){
                                 printf("hw1shell: too many background commands running\n");
                                 break;
                             }
@@ -99,46 +98,36 @@ void hw1shell$()
                             strtok(bg_com, "&");
                             jobs[i].pid = pid;
                             strcpy(jobs[i].command, bg_com);
-                            printf("%d  %s\n", jobs[i].pid, jobs[i].command);
+                            //printf("%d  %s\n", jobs[i].pid, jobs[i].command);
                             break;
                         }
                     }
                     continue;
                 }
-                //printf("this is the father");
-                else if (waitpid(pid, &child_state, 0) > 0)
-                {
-                    printf("hw1shell: pid %d finished\n", pid);
-                }
-
+                
+                
                 else if (waitpid(pid, &child_state, 0) == -1)
                 {
                     print_errors(13, parsed_command[0], -1);
                 }
 
-                check_zombies(pid, child_state, jobs);
             }
         }
-        
+        check_zombies(jobs);
     }
 }
 
-void check_zombies(pid_t pid, int child_state, process_info* jobs)
+void check_zombies(process_info* jobs)
 {
-    //printf("hw1shell: pid %d started\n", pid);
-
-    if (waitpid(pid , &child_state, WNOHANG) != 0)
+    for (int i = 0; i<4; i++)
     {
-        //printf("found zombie process %d\n", pid);
-        for (int i = 0; i<4; i++)
-        {
-            if (jobs[i].pid == pid){
-                jobs[i].pid = 0;
-                strcpy(jobs[i].command, "\0"); 
-            }
+        pid_t pid=jobs[i].pid;
+        pid = waitpid(pid , NULL, WNOHANG);
+        if (pid > 0){
+            printf("hw1shell: pid %d finished\n", pid);
+            jobs[i].pid = 0;
+            strcpy(jobs[i].command, "\0"); 
         }
-
-        //printf("hw1shell: pid %d finished\n", pid);                
     }
 }
 
@@ -201,9 +190,7 @@ int parse_string(char* str, char** parsed_command)
             //& is the last character
             {
                 if (strlen(strchr(parsed_command[i-1], '&'))==1)
-                    printf("background command\n");
                     parsed_command[i-1] = strtok(parsed_command[i-1], "&");
-                    printf("the command is now %s\n", parsed_command[i-1]); //is it needed? 
                     return 1;
             }
             else
