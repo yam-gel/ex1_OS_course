@@ -40,6 +40,7 @@ void hw1shell$()
 
     while (1)
     {
+        check_zombies(jobs);
         printf("%s", "hw1shell$ ");
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         //removing the trailing '\n' from the string
@@ -113,7 +114,7 @@ void hw1shell$()
 
             }
         }
-        check_zombies(jobs);
+
     }
 }
 
@@ -122,9 +123,10 @@ void check_zombies(process_info* jobs)
     for (int i = 0; i<4; i++)
     {
         pid_t pid=jobs[i].pid;
-        pid = waitpid(pid , NULL, WNOHANG);
-        if (pid > 0){
-            printf("hw1shell: pid %d finished\n", pid);
+        pid_t pid2 = waitpid(pid , NULL, WNOHANG);
+        if (pid2 != 0){
+            if (pid != 0)
+                printf("hw1shell: pid %d finished\n", pid);
             jobs[i].pid = 0;
             strcpy(jobs[i].command, "\0"); 
         }
@@ -165,6 +167,7 @@ void execute_internal_command(char** parsed_command) //linux commands are execut
 
     if (!strcmp(parsed_command[0], "exit")) //TODO: need to finish all child processes, and if nedded, free allocated memory 
     {
+        while(wait(NULL) > 0);
         exit(0);
     }
 
