@@ -66,7 +66,8 @@ void hw1shell$()
         else
         {
             pid = fork();
-            if (pid == 0)
+            if (pid == -1) print_errors(13, parsed_command[0], -1); //child process creation failed
+            else if (pid == 0)
             {
                 if (execvp(parsed_command[0], parsed_command) == -1) //check if system call fails 
                 {
