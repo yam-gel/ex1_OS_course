@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "hw1_315393462.h"
+#include "hw1_315393462_321014763.h"
 
 typedef struct process_info
 {
