@@ -34,19 +34,18 @@ void hw1shell$()
         //make sure all jobs pid are initiallized to 0
         if (jobs[j].pid != 0)
             jobs[j].pid = 0;
-        //strcpy(jobs[j].command, 0);
     }
 
 
     while (1)
     {
-        check_zombies(jobs);
+        check_zombies(jobs); //check if there are bg jobs that finished running and handle appropriately
         printf("%s", "hw1shell$ ");
         fgets(command, MAX_COMMAND_LENGTH, stdin);
-        //removing the trailing '\n' from the string
-        command[strcspn(command, "\n")] = 0;
-        char bg_com[MAX_COMMAND_LENGTH]; 
-        strcpy(bg_com, command);
+        command[strcspn(command, "\n")] = 0; //removing the trailing '\n' from the string
+        
+        char bg_command[MAX_COMMAND_LENGTH]; 
+        strcpy(bg_command, command);
 
         if (strlen(command)==0)
              //input was empty
@@ -61,6 +60,7 @@ void hw1shell$()
         }
         else if (!strcmp(parsed_command[0], "jobs"))
         {
+            check_zombies(jobs);
             background_jobs(parsed_command[0], jobs);
         }
         else
@@ -68,8 +68,7 @@ void hw1shell$()
             pid = fork();
             if (pid == 0)
             {
-                //printf("child process, pid = %u\n",getpid());
-                if (execvp(parsed_command[0], parsed_command) == -1)
+                if (execvp(parsed_command[0], parsed_command) == -1) //check if system call fails 
                 {
                     print_errors(11, NULL, 0);
                     print_errors(13, parsed_command[0], -1);
@@ -82,24 +81,23 @@ void hw1shell$()
             {  
                 if (background) 
                 {             
-                    printf("hw1shell: pid %d started\n", pid);
-                    //check_zombies(pid, child_state, jobs);
+                    check_zombies(jobs);
                     for (int i=0; i<4; i++)
                     {
-                        if (jobs[i].pid)
+                        if (jobs[i].pid) // check if there are already 4 backroud jobs running and handle appropriately
                         {
                             if (i==3){
-                                printf("hw1shell: too many background commands running\n");
+                                print_errors(6, NULL, 0);
                                 break;
                             }
                                 
                         }
                         else
                         {
-                            strtok(bg_com, "&");
+                            printf("hw1shell: pid %d started\n", pid);
+                            strtok(bg_command, "&");
                             jobs[i].pid = pid;
-                            strcpy(jobs[i].command, bg_com);
-                            //printf("%d  %s\n", jobs[i].pid, jobs[i].command);
+                            strcpy(jobs[i].command, bg_command);
                             break;
                         }
                     }
@@ -118,7 +116,7 @@ void hw1shell$()
     }
 }
 
-void check_zombies(process_info* jobs)
+void check_zombies(process_info* jobs) //checks if there are backround jobs that finished running
 {
     for (int i = 0; i<4; i++)
     {
@@ -133,8 +131,13 @@ void check_zombies(process_info* jobs)
     }
 }
 
-void print_errors(int error, char* system_call, int errno)
+void print_errors(int error, char* system_call, int errno) //error handler
 {
+    if (error == 6)
+    {
+        printf("hw1shell: too many background commands running\n");
+    }
+
     if (error == 11)
     {
         printf("hw1shell: invalid command\n");
@@ -145,7 +148,8 @@ void print_errors(int error, char* system_call, int errno)
         printf("hw1shell: %s failed, errno is %d\n", system_call, errno);
     }
 }
-void change_dir(char* path)
+
+void change_dir(char* path) //internal command "cd" execution
 {
     int i = chdir(path); 
 
@@ -153,7 +157,7 @@ void change_dir(char* path)
         print_errors(11, NULL, 0);
 }
 
-void background_jobs(char* command, struct process_info* jobs)
+void background_jobs(char* command, struct process_info* jobs) //print backroung jobs
 {
     for (int i=0; i<4; i++)
     {
@@ -162,10 +166,10 @@ void background_jobs(char* command, struct process_info* jobs)
     }
 }
 
-void execute_internal_command(char** parsed_command) //linux commands are executed here (ls, cd, etc...)
+void execute_internal_command(char** parsed_command) //linux internal commands are executed here
 {
 
-    if (!strcmp(parsed_command[0], "exit")) //TODO: need to finish all child processes, and if nedded, free allocated memory 
+    if (!strcmp(parsed_command[0], "exit"))
     {
         while(wait(NULL) > 0);
         exit(0);
