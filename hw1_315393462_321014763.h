@@ -7,20 +7,7 @@ typedef struct process_info
     char command[MAX_COMMAND_LENGTH];
 }process_info;
 
-void check_zombies(process_info* jobs) //checks if there are backround jobs that finished running
-{
-    for (int i = 0; i<4; i++)
-    {
-        pid_t pid=jobs[i].pid;
-        pid_t pid2 = waitpid(pid , NULL, WNOHANG);
-        if (pid2 != 0){
-            if (pid != 0)
-                printf("hw1shell: pid %d finished\n", pid);
-            jobs[i].pid = 0;
-            strcpy(jobs[i].command, "\0"); 
-        }
-    }
-}
+
 
 void print_errors(int error, char* system_call, int errno) //error handler
 {
@@ -38,6 +25,24 @@ void print_errors(int error, char* system_call, int errno) //error handler
     {
         printf("hw1shell: %s failed, errno is %d\n", system_call, errno);
     }
+}
+
+void check_zombies(process_info* jobs) //checks if there are backround jobs that finished running
+{
+    pid_t pid;
+    
+    while((pid = waitpid(-1,NULL,WNOHANG))>0){
+        for (int i = 0; i<4; i++){
+            if (jobs[i].pid == pid){
+                printf("hw1shell: pid %d finished\n", pid);
+                //printf("pid is: %d\n", jobs[i].pid);
+                jobs[i].pid = 0;
+                strcpy(jobs[i].command, "\0"); 
+            }
+
+        }
+    }
+    
 }
 
 void change_dir(char* path) //internal command "cd" execution

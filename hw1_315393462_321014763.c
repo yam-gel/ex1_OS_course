@@ -69,7 +69,7 @@ void hw1shell$()
             {  
                 if (background) 
                 {             
-                    check_zombies(jobs);
+                    check_zombies(jobs); //firstly check if a slot can be allocated in case there is a process that is done
                     for (int i=0; i<4; i++)
                     {
                         if (jobs[i].pid) // check if there are already 4 backroud jobs running and handle appropriately
